@@ -30,6 +30,7 @@ pip install -e "C:\Github Projects\screen-number-typer"
 from screen_numbers import read_number, read_numbers, read_text, type_text
 
 read_number()                              # "33333333", main number in the middle of the screen
+read_number(region="middle-small")         # just the centre ("middle-medium" sits between)
 read_number(region="screen")               # anywhere on screen
 read_number(region=(100, 200, 600, 400))   # inside a box: left, top, right, bottom (screen pixels)
 read_number(image=pil_image)               # in a picture you already have
@@ -48,6 +49,7 @@ Other helpers: `capture(region)` returns the screenshot as a PIL image, `middle_
 
 ```
 screen-numbers                         prints the main number, e.g. 33333333
+screen-numbers --region middle-small   look only at the centre (or middle-medium)
 screen-numbers --region screen         look anywhere on screen
 screen-numbers --box 100 200 600 400   look inside a box
 screen-numbers --image shot.png        read a picture file
@@ -71,6 +73,7 @@ const { number } = JSON.parse(execFileSync("screen-numbers", ["--json"]).toStrin
 Double-click `run.bat`. The first run creates `.venv` and installs everything.
 
 - **Read (F8)** reads the middle of the screen and shows the number. F8 works while other windows are in front.
+- **Middle size** picks how much of the middle to read: Large (default), Medium or Small.
 - **Select area** reads only a box you drag. **Use middle** goes back.
 - **Keep watching** reads every second and reacts when the number changes.
 - **Type after reading** types the number, optionally clicking an answer box first and pressing Enter.

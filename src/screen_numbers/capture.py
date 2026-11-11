@@ -13,6 +13,11 @@ except Exception:
 
 # left, top, right, bottom as fractions of the main screen
 MIDDLE = (0.10, 0.10, 0.90, 0.88)
+MIDDLE_SIZES = {
+    "large": MIDDLE,                    # most of the screen, minus taskbar, title bars and edges
+    "medium": (0.20, 0.20, 0.80, 0.80),
+    "small": (0.30, 0.30, 0.70, 0.70),  # just the centre
+}
 
 Box = tuple[int, int, int, int]  # left, top, right, bottom in screen pixels
 
@@ -34,9 +39,11 @@ def screen_box() -> Box:
 
 
 def resolve(region) -> Box:
-    """Turn "middle", "screen" or a (left, top, right, bottom) box into a box."""
+    """Turn "middle", "middle-medium", "middle-small", "screen" or a (left, top, right, bottom) box into a box."""
     if region is None or region == "middle":
         return middle_box()
+    if isinstance(region, str) and region.startswith("middle-") and region[7:] in MIDDLE_SIZES:
+        return middle_box(MIDDLE_SIZES[region[7:]])
     if region == "screen":
         return screen_box()
     if isinstance(region, (tuple, list)) and len(region) == 4:
@@ -44,7 +51,8 @@ def resolve(region) -> Box:
         if r - l < 1 or b - t < 1:
             raise ValueError(f"Region {region} is empty: right must be > left and bottom > top.")
         return (l, t, r, b)
-    raise ValueError(f'region must be "middle", "screen" or (left, top, right, bottom), not {region!r}')
+    raise ValueError('region must be "middle", "middle-medium", "middle-small", "screen" '
+                     f"or (left, top, right, bottom), not {region!r}")
 
 
 def capture(region="middle") -> Image.Image:

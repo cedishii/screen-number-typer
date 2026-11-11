@@ -130,6 +130,15 @@ class App:
         self.clear_btn.pack(side="right")
         ttk.Button(where, text="Select area", command=lambda: self.pick("area")).pack(side="right", padx=6)
 
+        size_row = ttk.Frame(root)
+        size_row.pack(fill="x", padx=12, pady=(0, 4))
+        ttk.Label(size_row, text="Middle size:").pack(side="left")
+        self.size_var = tk.StringVar(value=self.s.get("size", "Large"))
+        size_box = ttk.Combobox(size_row, textvariable=self.size_var, values=["Large", "Medium", "Small"],
+                                state="readonly", width=8)
+        size_box.pack(side="left", padx=6)
+        size_box.bind("<<ComboboxSelected>>", lambda e: (self.clear_area(), self.say(f"Middle size: {self.size_var.get()}.")))
+
         typing = ttk.LabelFrame(root, text="Type the answer (optional)")
         typing.pack(fill="x", padx=12, pady=10)
         self.type_var = tk.BooleanVar(value=self.s.get("type", False))
@@ -158,7 +167,8 @@ class App:
         self.status.config(text=text)
 
     def save(self):
-        self.s.update(area=self.area, point=self.point, type=self.type_var.get(), enter=self.enter_var.get())
+        self.s.update(area=self.area, point=self.point, type=self.type_var.get(), enter=self.enter_var.get(),
+                      size=self.size_var.get())
         try:
             SETTINGS.write_text(json.dumps(self.s, indent=2))
         except OSError:
@@ -166,7 +176,8 @@ class App:
 
     def refresh_labels(self):
         a = self.area
-        self.area_lbl.config(text=f"Reading: your area {a[2]-a[0]}×{a[3]-a[1]}" if a else "Reading: middle of screen")
+        self.area_lbl.config(text=f"Reading: your area {a[2]-a[0]}×{a[3]-a[1]}" if a
+                             else f"Reading: middle of screen ({self.size_var.get()})")
         self.clear_btn.state(["!disabled"] if a else ["disabled"])
         self.point_lbl.config(text=f"Clicks at ({self.point[0]}, {self.point[1]})" if self.point
                               else "Not set: types into whatever window has focus")
@@ -219,7 +230,9 @@ class App:
 
     def _read_worker(self, from_watch, hidden):
         try:
-            result = (screen_numbers.read_number(self.area or "middle"), None)
+            size = self.size_var.get().lower()
+            region = self.area or ("middle" if size == "large" else f"middle-{size}")
+            result = (screen_numbers.read_number(region), None)
         except Exception as e:
             result = (None, str(e))
         self.root.after(0, lambda: self._show(*result, from_watch, hidden))

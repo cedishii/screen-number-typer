@@ -1,6 +1,7 @@
 """Command line, so apps in any language can use it:
 
     screen-numbers                      prints the main number in the middle of the screen
+    screen-numbers --region middle-small  ...just the centre (or middle-medium)
     screen-numbers --region screen      ...anywhere on screen
     screen-numbers --box 100 200 600 400
     screen-numbers --image shot.png
@@ -22,7 +23,7 @@ from . import read_number, read_numbers, type_text
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="screen-numbers", description="Read numbers off the screen.")
     where = p.add_mutually_exclusive_group()
-    where.add_argument("--region", choices=["middle", "screen"], default="middle")
+    where.add_argument("--region", choices=["middle", "middle-medium", "middle-small", "screen"], default="middle")
     where.add_argument("--box", nargs=4, type=int, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM"))
     where.add_argument("--image", help="read this picture file instead of the screen")
     p.add_argument("--all", action="store_true", help="every number, not just the main one")
