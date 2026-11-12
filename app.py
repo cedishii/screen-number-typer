@@ -103,6 +103,7 @@ class App:
         self.busy = False
         self.watching = False
         self.last = None
+        self.last_image = None   # the last screenshot read, for teaching
 
         root.title("Screen Number Reader")
         root.attributes("-topmost", True)
@@ -121,6 +122,15 @@ class App:
         row = ttk.Frame(root)
         row.pack(pady=(0, 6))
         ttk.Button(row, text="Copy", command=self.copy).pack(side="left")
+
+        teach = ttk.Frame(root)
+        teach.pack(fill="x", padx=12, pady=(0, 4))
+        ttk.Label(teach, text="Wrong? Right number:").pack(side="left")
+        self.teach_var = tk.StringVar()
+        entry = ttk.Entry(teach, textvariable=self.teach_var, width=14)
+        entry.pack(side="left", padx=6)
+        entry.bind("<Return>", lambda e: self.teach())
+        ttk.Button(teach, text="Teach", command=self.teach).pack(side="left")
 
         where = ttk.Frame(root)
         where.pack(fill="x", padx=12, pady=4)
@@ -232,7 +242,9 @@ class App:
         try:
             size = self.size_var.get().lower()
             region = self.area or ("middle" if size == "large" else f"middle-{size}")
-            result = (screen_numbers.read_number(region), None)
+            image = screen_numbers.capture(region)
+            self.last_image = image
+            result = (screen_numbers.read_number(image=image), None)
         except Exception as e:
             result = (None, str(e))
         self.root.after(0, lambda: self._show(*result, from_watch, hidden))
@@ -256,6 +268,27 @@ class App:
         self.say(f"Read at {stamp}.")
         if self.type_var.get():
             self.root.after(50, lambda: self.type_answer(number))
+
+    def teach(self):
+        """Save the last screenshot's digit shapes as the number typed in, so
+        later reads in this font trust those shapes over OCR."""
+        number = self.teach_var.get().strip()
+        if not number.isdigit():
+            self.say("Type the right number using digits only.")
+            return
+        if self.last_image is None:
+            self.say("Read a number first, then teach the right one.")
+            return
+        try:
+            saved = screen_numbers.learn_digits(number, image=self.last_image)
+        except Exception as e:
+            self.say(f"Couldn't teach it: {e}")
+            return
+        self.teach_var.set("")
+        self.number_var.set(number)
+        self.last = number
+        self.say(f"Learned {saved} new digit shape(s) from {number}." if saved
+                 else f"Already knew those shapes for {number}.")
 
     def type_answer(self, answer):
         screen_numbers.type_text(answer, click_at=self.point, enter=self.enter_var.get())

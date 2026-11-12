@@ -70,9 +70,9 @@ const { number } = JSON.parse(execFileSync("screen-numbers", ["--json"]).toStrin
 
 ## Fonts OCR misreads
 
-Some game fonts confuse Windows' text recognition. A slashed zero, for example, gets read as 9, Ø or skipped entirely. To prevent this, `read_number` cuts the number into one shape per digit. It compares each shape with saved reference shapes in [src/screen_numbers/glyphs/](src/screen_numbers/glyphs/). When a shape clearly matches a reference, that digit wins over OCR's guess.
+Some game fonts confuse Windows' text recognition. A slashed zero, for example, gets read as 9, Ø or skipped entirely. To prevent this, `read_number` cuts the number into one shape per digit. It compares each shape with saved reference shapes in [src/screen_numbers/glyphs/](src/screen_numbers/glyphs/). When a shape clearly matches a reference, and beats every other digit's reference by a clear margin, that digit wins over OCR's guess. Shapes keep their width, so a narrow 1 and a wide 9 look clearly different.
 
-The saved references cover the green game font's 0, 2, 3 and 7. To teach it more digits or another font, take a screenshot with the number in the middle and tell it what the number is:
+The saved references cover every digit of both green game fonts (the monospace one with a slashed 0, and the bold rounded one), learned from the real screenshots in [tests/samples/](tests/samples/). To check accuracy after a change, run `python tests/eval_samples.py` (add `--loo` to test each sample against shapes learned only from the others). To teach another font, or a sample it gets wrong, add the screenshot to `tests/samples/` named after its number, or teach it directly. The easiest way is in the desktop tool: when a read is wrong, type the right number next to **Teach** and press it. Or from a screenshot with the number in the middle:
 
 ```
 screen-numbers --image shot.png --learn 1456890
@@ -93,10 +93,11 @@ Double-click `run.bat`. The first run creates `.venv` and installs everything.
 - **Middle size** picks how much of the middle to read: Large (default), Medium or Small.
 - **Select area** reads only a box you drag. **Use middle** goes back.
 - **Keep watching** reads every second and reacts when the number changes.
+- **Teach**: when a read is wrong, type the right number and press Teach. It saves that screenshot's digit shapes so the same font reads correctly next time.
 - **Type after reading** types the number, optionally clicking an answer box first and pressing Enter.
 
 Settings are saved in `settings.json`.
 
 ## How it reads
 
-Small text is enlarged and light-on-dark text is inverted before reading. Letters that look like digits (O→0, l→1, S→5) are corrected only inside words that are mostly digits. The main number is the one with the tallest text, with a tie-break towards the centre.
+Small text is enlarged and light-on-dark text is inverted before reading. Each number found is then cut out, enlarged and read a second time, because OCR reads a close crop much better than a small number in a big screenshot. If the first read finds nothing, it crops around the strongest contrast and tries again. Letters that look like digits (O→0, l→1, S→5) are corrected only inside words that are mostly digits. The main number is the one with the tallest text, with a tie-break towards the centre.

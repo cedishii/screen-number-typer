@@ -78,8 +78,7 @@ def read_text(img: Image.Image) -> str:
 def read_main_number(img: Image.Image) -> str | None:
     """The most prominent number: the tallest digits, preferring ones near the centre.
     Digits are checked against the saved digit shapes (see glyphs.py)."""
-    prepared, candidates = _number_candidates(img)
-    for text, box in candidates:
+    for prepared, text, box in _close_looks(img):
         fixed = glyphs.correct(prepared, box, text)
         if "?" not in fixed:
             return fixed
@@ -88,10 +87,47 @@ def read_main_number(img: Image.Image) -> str | None:
 
 def learn_main_number(img: Image.Image, number: str) -> int:
     """Save the main number's digit shapes as references for `number`."""
+    for prepared, text, box in _close_looks(img):
+        return glyphs.learn(prepared, box, number)
+    raise ValueError("no number found to learn from")
+
+
+def _close_looks(img: Image.Image):
+    """Each number, most prominent first, read a second time from a close crop.
+
+    OCR reads a small number in a big screenshot worse than the same number
+    cut out and enlarged: a slashed 0 comes back as 9 or "?", or the number is
+    missed entirely. So every number found is cut out with a margin and read
+    again, and that reading (and its digit shapes) is used. When the first
+    look finds nothing, the crop is the area around the strongest contrast."""
     prepared, candidates = _number_candidates(img)
-    if not candidates:
-        raise ValueError("no number found to learn from")
-    return glyphs.learn(prepared, candidates[0][1], number)
+    boxes = [box for _, box in candidates] or [b for b in [_content_box(prepared)] if b]
+    for box in boxes:
+        x, y, w, h = box
+        m = max(8, int(h * 0.6))
+        crop = prepared.crop((max(0, int(x - m)), max(0, int(y - m)),
+                              min(prepared.width, int(x + w + m)), min(prepared.height, int(y + h + m))))
+        close, again = _number_candidates(crop)
+        if again:
+            yield close, again[0][0], again[0][1]
+        else:
+            text = next((t for t, b in candidates if b == box), None)
+            if text:
+                yield prepared, text, box
+
+
+def _content_box(prepared: Image.Image):
+    """Box (x, y, w, h) around the darkest ink in a prepared (dark-on-light)
+    image, or None when it is blank. Used when OCR finds no number at all."""
+    values = sorted(prepared.get_flattened_data())
+    lo, mid = values[len(values) // 5000], values[len(values) // 2]   # a number can be <1% of the area
+    if mid - lo < 40:
+        return None
+    ink = prepared.point(lambda v: 255 if v < lo + 0.4 * (mid - lo) else 0)
+    box = ink.getbbox()
+    if not box:
+        return None
+    return box[0], box[1], box[2] - box[0], box[3] - box[1]
 
 
 def _number_candidates(img: Image.Image):
