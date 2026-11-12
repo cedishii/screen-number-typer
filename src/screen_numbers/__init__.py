@@ -16,8 +16,8 @@ from . import ocr
 from .capture import MIDDLE, MIDDLE_SIZES, capture, middle_box, screen_box
 from .typing import type_text
 
-__all__ = ["read_number", "read_numbers", "read_text", "capture", "middle_box", "screen_box",
-           "type_text", "MIDDLE", "MIDDLE_SIZES"]
+__all__ = ["read_number", "read_numbers", "read_text", "learn_digits", "capture", "middle_box",
+           "screen_box", "type_text", "MIDDLE", "MIDDLE_SIZES"]
 __version__ = "0.1.0"
 
 
@@ -28,6 +28,12 @@ def _image(region, image: Image.Image | None) -> Image.Image:
 def read_number(region="middle", image: Image.Image | None = None) -> str | None:
     """The main number: the tallest digits, preferring ones near the centre."""
     return ocr.read_main_number(_image(region, image))
+
+
+def learn_digits(number: str, region="middle", image: Image.Image | None = None) -> int:
+    """Teach it a font: save the main number's digit shapes as `number`'s digits,
+    so later reads trust those shapes over OCR. Returns how many shapes were new."""
+    return ocr.learn_main_number(_image(region, image), number)
 
 
 def read_numbers(region="middle", image: Image.Image | None = None) -> list[dict]:

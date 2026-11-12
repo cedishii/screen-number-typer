@@ -68,6 +68,23 @@ const { execFileSync } = require("child_process");
 const { number } = JSON.parse(execFileSync("screen-numbers", ["--json"]).toString());
 ```
 
+## Fonts OCR misreads
+
+Some game fonts confuse Windows' text recognition. A slashed zero, for example, gets read as 9, Ø or skipped entirely. To prevent this, `read_number` cuts the number into one shape per digit. It compares each shape with saved reference shapes in [src/screen_numbers/glyphs/](src/screen_numbers/glyphs/). When a shape clearly matches a reference, that digit wins over OCR's guess.
+
+The saved references cover the green game font's 0, 2, 3 and 7. To teach it more digits or another font, take a screenshot with the number in the middle and tell it what the number is:
+
+```
+screen-numbers --image shot.png --learn 1456890
+```
+
+```python
+from screen_numbers import learn_digits
+learn_digits("1456890", image=pil_image)
+```
+
+Each digit's shape is saved as `<digit>_<id>.png`. Delete a file to forget that shape. Only `read_number` (and the command without `--all`) uses the shapes.
+
 ## 3. Desktop tool
 
 Double-click `run.bat`. The first run creates `.venv` and installs everything.

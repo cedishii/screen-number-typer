@@ -7,6 +7,8 @@
     screen-numbers --image shot.png
     screen-numbers --all --json         every number, as JSON
     screen-numbers --type --enter       also type the number into the focused window
+    screen-numbers --image shot.png --learn 327300
+                                        teach it the digit shapes of a font
 
 Exit code 0 when a number was found, 1 when none, 2 on an error.
 """
@@ -17,7 +19,7 @@ import sys
 
 from PIL import Image
 
-from . import read_number, read_numbers, type_text
+from . import learn_digits, read_number, read_numbers, type_text
 
 
 def main(argv=None) -> int:
@@ -31,11 +33,18 @@ def main(argv=None) -> int:
     p.add_argument("--type", action="store_true", help="type the main number into the focused window")
     p.add_argument("--enter", action="store_true", help="press Enter after typing")
     p.add_argument("--click", nargs=2, type=int, metavar=("X", "Y"), help="click here before typing")
+    p.add_argument("--learn", metavar="NUMBER",
+                   help="the main number is NUMBER: save its digit shapes as references")
     a = p.parse_args(argv)
 
     try:
         region = tuple(a.box) if a.box else a.region
         image = Image.open(a.image) if a.image else None
+        if a.learn:
+            if not a.learn.isdigit():
+                raise ValueError("--learn takes digits only")
+            print(f"saved {learn_digits(a.learn, region, image)} new digit shapes")
+            return 0
         if a.all:
             found = read_numbers(region, image)
             print(json.dumps(found) if a.json else "\n".join(n["text"] for n in found))
