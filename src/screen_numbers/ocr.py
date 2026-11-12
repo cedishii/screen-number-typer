@@ -80,17 +80,44 @@ def read_main_number(img: Image.Image) -> str | None:
     half_diag = (cx ** 2 + cy ** 2) ** 0.5
     best, best_score = None, 0.0
     for line in lines:
-        for word, height in line["words"]:
-            fixed = fix_lookalikes(word)
-            m = re.fullmatch(r"\W*([-+]?\d[\d,./:\-]*\d|\d)\W*", fixed)
-            if not m:
-                continue
-            x, y, w, h = line["box"]
-            dist = (((x + w / 2) - cx) ** 2 + ((y + h / 2) - cy) ** 2) ** 0.5 / half_diag
+        x, y, w, h = line["box"]
+        dist = (((x + w / 2) - cx) ** 2 + ((y + h / 2) - cy) ** 2) ** 0.5 / half_diag
+        for text, height in _numbers_in(line["words"]):
             score = height * (1 - 0.5 * dist)
             if score > best_score:
-                best, best_score = m.group(1), score
+                best, best_score = text, score
     return best
+
+
+MAX_JOINED_DIGITS = 11
+
+
+def _numbers_in(words: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    """Number-like words in a line. OCR splits spaced-out digits ("12345 67890")
+    into several words, so neighbouring all-digit words of similar height are
+    joined back together, up to MAX_JOINED_DIGITS digits."""
+    found = []
+    run, run_h = "", 0.0
+    for word, height in words:
+        fixed = fix_lookalikes(word)
+        m = re.fullmatch(r"\W*([-+]?\d[\d,./:\-]*\d|\d)\W*", fixed)
+        if not m:
+            if run:
+                found.append((run, run_h))
+            run = ""
+            continue
+        text = m.group(1)
+        if (run and text.isdigit() and run.isdigit()
+                and len(run) + len(text) <= MAX_JOINED_DIGITS
+                and abs(height - run_h) <= 0.25 * max(height, run_h)):
+            run, run_h = run + text, max(run_h, height)
+            continue
+        if run:
+            found.append((run, run_h))
+        run, run_h = text, height
+    if run:
+        found.append((run, run_h))
+    return found
 
 
 # Letters OCR often mistakes for digits, fixed only inside number-like words.
